@@ -33,10 +33,10 @@ func main() {
 	addFlags := flag.NewFlagSet("add", flag.ExitOnError)
 	addFileset := addFlags.String("fileset", "default", "Fileset where files are added. Created if not present.")
 	recursive := addFlags.Bool("recursive", true, "Add directories recursively.")
-	overwrite := addFlags.Bool("overwrite", false, "Overwrite existing data.")
+	overwrite := addFlags.Bool("overwrite", false, "Overwrite existing data if already in the database. Also see --skip.")
 	filechecks := addFlags.String("filechecks", "size,modtime,ownership,permissions,sha256", "File checks.")
 	dirchecks := addFlags.String("dirchecks", "child,modtime,ownership,permissions", "Directory checks.")
-	skip := addFlags.Bool("skip", false, "Skip existing data.")
+	skip := addFlags.Bool("skip", false, "Ignore files if already in the database. Also see --overwrite")
 
 	deleteFlags := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteFileset := deleteFlags.String("fileset", "default", "Fileset where files will be deleted.")
@@ -53,11 +53,12 @@ func main() {
 	copySetFlags := flag.NewFlagSet("copyset", flag.ExitOnError)
 	copyFileset := copySetFlags.String("fileset", "default", "Fileset to copy.")
 
+	flagSets := []*flag.FlagSet{addFlags, deleteFlags, verifyFlags, listFlags, deleteSetFlags, copySetFlags}
 	// 0 = executable name
 	// 1 = command
 	// 2 ... the arguments
 	if len(os.Args) < 2 {
-		log.Fatalf(err020)
+		printManualAndExit(flagSets)
 	}
 	cmd := os.Args[1]
 
@@ -166,7 +167,8 @@ func main() {
 		defer func() {must(tripDb.Rollback())}()
 		mustCommitOrRollback(proc.CopySet(*copyFileset, copySetFlags.Arg(0), tripDb), tripDb)
 	default:
-		log.Fatalf(err080, cmd)
+		log.Printf(err080, cmd)
+		printManualAndExit(flagSets)
 	}
 }
 
@@ -190,6 +192,14 @@ func mustCommitOrRollback(err error, tripDb *db.TriplineDb) {
 		// Print the message and terminate with an error.
 		log.Fatal(err)
 	}
+}
+
+func printManualAndExit(sets []*flag.FlagSet) {
+	log.Printf(err020)
+	for _, set := range sets {
+		set.Usage()
+	}
+	os.Exit(1)
 }
 
 
