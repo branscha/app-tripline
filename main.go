@@ -10,7 +10,7 @@ import (
 
 const (
 	err010 = "(tripl/010) error:%v"
-	err020 = "(tripl/020) expected command: add, delete, verify, list, deleteset, copyset or listsets"
+	err020 = "(tripl/020) expected command: add, delete, verify, list, deleteset, copyset, listsets, sign or verifysig"
 	err030 = "(tripl/030) command 'add' expects one or more filenames"
 	err035 = "(tripl/035) command 'delete' expects one or more filenames"
 	err040 = "(tripl/040) command 'list' does not handle arguments"
@@ -19,7 +19,7 @@ const (
 	err070 = "(tripl/070) command 'copyset' expects a single argument, the target fileset name"
 	err080 = "(tripl/080) unknown command '%s'"
 	err090 = "(tripl/090) command 'sign' expects a password argument"
-	err095 = "(tripl/095) command 'verisign' expects a password argument"
+	err095 = "(tripl/095) command 'verifysig' expects a password argument"
 )
 
 const (
@@ -55,7 +55,7 @@ func main() {
 	copySetFlags := flag.NewFlagSet("copyset", flag.ExitOnError)
 	copyFileset := copySetFlags.String("fileset", "default", "Fileset to copy.")
 
-	signFlags := flag.NewFlagSet("sign/verisign", flag.ExitOnError)
+	signFlags := flag.NewFlagSet("sign/verifysig", flag.ExitOnError)
 	signFileset := signFlags.String("fileset", "default", "Fileset to copy.")
 	signOverwrite := signFlags.Bool("overwrite", false, "Overwrite existing signature.")
 
@@ -185,7 +185,7 @@ func main() {
 		// Start writable transaction
 		must(tripDb.Begin(true))
 		mustCommitOrRollback(proc.SignSet(*signFileset, signFlags.Arg(0), *signOverwrite, tripDb), tripDb)
-	case "verisign":
+	case "verifysig":
 		// Parse the arguments
 		err := signFlags.Parse(os.Args[2:])
 		if err == flag.ErrHelp {

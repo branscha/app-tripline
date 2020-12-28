@@ -89,7 +89,7 @@ Protect against database tampering with signatures. It is a manual process, the 
 verified by the other operations. 
 
     tripline sign
-    tripline verisign
+    tripline verifysig
 
 Options
 * --fileset NAME
