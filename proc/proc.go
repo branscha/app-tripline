@@ -35,7 +35,7 @@ type fileChecker interface {
 }
 
 const (
-	err005 = "(proc/005) fileset '%s' cannot start with underscore _ (reserved name)"
+	err005 = "(proc/005) fileset '%s' underscore prefix reserved for internal use"
 	err010 = "(proc/010) parse file checks:%v"
 	err020 = "(proc/020) parse dir checks:%v"
 	err030 = "(proc/030) unknown check '%s'"
@@ -49,6 +49,8 @@ const (
 	err110 = "(proc/110) copy fileset:%v"
 	err120 = "(proc/120) query files '%s':%v"
 	err130 = "(proc/130) delete file:%v"
+	err140 = "(proc/140) verify fileset '%s' signature:%v"
+	err150 = "(proc/150) sign fileset '%s':%v"
 )
 
 const (
@@ -312,15 +314,14 @@ func verifyFile(fqn string, fileset string, tripDb *db.TriplineDb) (int, error) 
 	return fails, nil
 }
 
+// List the file sets in the database.
 func Listsets(tripDb *db.TriplineDb) error {
 	sets, err := tripDb.ListFilesets()
 	if err != nil {
 		return fmt.Errorf(err100, err)
 	}
 	for _, set := range sets {
-		if !strings.HasPrefix(set, "_") {
-			log.Printf(msg090, set)
-		}
+		log.Printf(msg090, set)
 	}
 	return nil
 }
@@ -373,7 +374,7 @@ func SignSet(fileset string, password string, update bool, tripDb *db.TriplineDb
 	}
 	err := tripDb.SignFileset(fileset, password, update)
 	if err != nil {
-		return fmt.Errorf("sign fileset:%v", err)
+		return fmt.Errorf(err150, fileset, err)
 	}
 	return nil
 }
@@ -385,7 +386,7 @@ func VerifySetSignature(fileset string, password string, tripDb *db.TriplineDb) 
 
 	err := tripDb.VerifyFilesetSignature(fileset, password)
 	if err != nil {
-		return fmt.Errorf("verify fileset signature:%v", err)
+		return fmt.Errorf(err140, fileset, err)
 	}
 	return nil
 }

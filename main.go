@@ -10,14 +10,16 @@ import (
 
 const (
 	err010 = "(tripl/010) error:%v"
-	err020 = "(tripl/020) expected command: add, delete, verify, list, deleteset, copyset or listsets."
-	err030 = "(tripl/030) command 'add' expects one or more filenames."
-	err035 = "(tripl/035) command 'delete' expects one or more filenames."
-	err040 = "(tripl/040) command 'list' does not handle arguments."
-	err050 = "(tripl/050) command 'deleteset' does not handle arguments."
-	err060 = "(tripl/060) command 'listsets' does not handle arguments."
-	err070 = "(tripl/070) command 'copyset' expects a single argument, the target fileset name."
+	err020 = "(tripl/020) expected command: add, delete, verify, list, deleteset, copyset or listsets"
+	err030 = "(tripl/030) command 'add' expects one or more filenames"
+	err035 = "(tripl/035) command 'delete' expects one or more filenames"
+	err040 = "(tripl/040) command 'list' does not handle arguments"
+	err050 = "(tripl/050) command 'deleteset' does not handle arguments"
+	err060 = "(tripl/060) command 'listsets' does not handle arguments"
+	err070 = "(tripl/070) command 'copyset' expects a single argument, the target fileset name"
 	err080 = "(tripl/080) unknown command '%s'"
+	err090 = "(tripl/090) command 'sign' expects a password argument"
+	err095 = "(tripl/095) command 'verisign' expects a password argument"
 )
 
 const (
@@ -57,7 +59,7 @@ func main() {
 	signFileset := signFlags.String("fileset", "default", "Fileset to copy.")
 	signOverwrite := signFlags.Bool("overwrite", false, "Overwrite existing signature.")
 
-	flagSets := []*flag.FlagSet{addFlags, deleteFlags, verifyFlags, listFlags, deleteSetFlags, copySetFlags}
+	flagSets := []*flag.FlagSet{addFlags, deleteFlags, verifyFlags, listFlags, deleteSetFlags, copySetFlags, signFlags}
 	// 0 = executable name
 	// 1 = command
 	// 2 ... the arguments
@@ -178,7 +180,7 @@ func main() {
 		}
 		// Arity check
 		if signFlags.NArg() != 1 {
-			log.Fatal("password must be provided")
+			log.Fatal(err090)
 		}
 		// Start writable transaction
 		must(tripDb.Begin(true))
@@ -191,7 +193,7 @@ func main() {
 		}
 		// Arity check
 		if signFlags.NArg() != 1 {
-			log.Fatal("password must be provided")
+			log.Fatal(err095)
 		}
 		must(tripDb.Begin(false))
 		defer func() { must(tripDb.Rollback()) }()
@@ -224,6 +226,7 @@ func mustCommitOrRollback(err error, tripDb *db.TriplineDb) {
 	}
 }
 
+// Helper to print the "usage" of each set in a list of flag sets.
 func printManualAndExit(sets []*flag.FlagSet) {
 	log.Printf(err020)
 	for _, set := range sets {

@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	dbname = ".tripline"
+	dbname    = ".tripline"
+	sigbucket = "_signatures"
 )
 
 const (
@@ -32,6 +33,14 @@ const (
 	err100 = "(db/100) transaction forbidden"
 	err110 = "(db/110) create fileset '%s':%v"
 	err120 = "(db/120) copy fileset '%s':%v"
+	err130 = "(db/130) open/create signatures:%v"
+	err140 = "(db/140) fileset signature '%s' exists"
+	err150 = "(db/150) sign fileset '%s':%v"
+	err160 = "(db/160) fileset hash '%s':%v"
+	err170 = "(db/170) no signatures, none added or tampered"
+	err180 = "(db/180) no signature, not added or tampered"
+	err190 = "(db/190) wrong password or tampered: %v"
+	err200 = "(db/200) contents changed or tampered"
 )
 
 var (
@@ -220,6 +229,7 @@ func (db *TriplineDb) ListTriplineRecords(fileset string) ([]TriplineEntry, erro
 
 // List the contents of a fileset, return the entries that match the given path prefix.
 // Returns an error if the fileset does not exist.
+// This is an easy way to query the subdirectories an files when the prefix is a directory path.
 func (db *TriplineDb) QueryTriplineRecords(fileset string, pathPrefix string) ([]TriplineEntry, error) {
 	if db.boltTx == nil {
 		return nil, fmt.Errorf(err080)
@@ -256,7 +266,12 @@ func (db *TriplineDb) ListFilesets() ([]string, error) {
 	}
 	result := make([]string, 0)
 	err := db.boltTx.ForEach(func(name []byte, _ *bolt.Bucket) error {
-		result = append(result, string(name))
+		bucketName := string(name)
+		// Bucket names starting with underscores are reserved names for internal use.
+		// Example _signatures bucket to store the fileset signatures.
+		if !strings.HasPrefix(bucketName, "_") {
+			result = append(result, bucketName)
+		}
 		return nil
 	})
 	if err != nil {
@@ -309,101 +324,117 @@ func (db *TriplineDb) CopyFileset(src, target string) error {
 	return nil
 }
 
+// Create a signature of the fileset contents and store it in a special _signatures bucket.
 func (db *TriplineDb) SignFileset(fileset string, password string, update bool) error {
 	if db.boltTx == nil || !db.boltTx.Writable() {
 		return fmt.Errorf(err085)
 	}
 
-	// Fetch the signature bucket.
-	signaturesBkt, err := db.boltTx.CreateBucketIfNotExists([]byte("_signatures"))
+	// Fetch the signature bucket. Or create it if it does not yet exists.
+	signaturesBkt, err := db.boltTx.CreateBucketIfNotExists([]byte(sigbucket))
 	if err != nil {
-		return fmt.Errorf("create/open _signatures: %s", err)
+		return fmt.Errorf(err130, err)
 	}
 
 	// Fetch the signature.
+	// The user has to explicitly overwrite the signature using the --overwrite option.
 	oldSignature := signaturesBkt.Get([]byte(fileset))
 	if oldSignature != nil && !update {
-		return fmt.Errorf("signature for '%s' exists", fileset)
+		return fmt.Errorf(err140, fileset)
 	}
 
-	// Dig up the source bucket
+	// Dig up the fileset bucket.
 	srcBkt := db.boltTx.Bucket([]byte(fileset))
 	if srcBkt == nil {
 		return fmt.Errorf(err020, fileset)
 	}
 
-	// Calculate bucket hash
+	// Calculate fileset bucket hash.
 	hash, err := calcBucketHash(srcBkt)
 	if err != nil {
 		return err
 	}
-	log.Printf("%x", hash)
+	log.Printf("hash: %x", hash)
 
-	// Calculate and print the signature
+	// Calculate the signature using the filest bucket contents.
 	signature, err := crypto.Encrypt([]byte(password), hash)
 	if err != nil {
-		return fmt.Errorf("sign fail: %v", err)
+		return fmt.Errorf(err150, fileset, err)
 	}
-	log.Printf("%x", signature)
+	log.Printf("signature: %x", signature)
 
+	// Store the signature in the _signatures bucket.
 	signaturesBkt.Put([]byte(fileset), signature)
 	return nil
 }
 
+// Verify if the validity of the existing fileset signature.
+// First we decrypt the signature and compare the hash that was calculated at the time of signing to the current hash.
+// If any intermediary steps fail the process fails, it might be the result of tampering.
 func (db *TriplineDb) VerifyFilesetSignature(fileset string, password string) error {
 	if db.boltTx == nil {
 		return fmt.Errorf(err080)
 	}
 
-	// Dig up the source bucket
+	// Dig up the fileset bucket.
 	srcBkt := db.boltTx.Bucket([]byte(fileset))
 	if srcBkt == nil {
 		return fmt.Errorf(err020, fileset)
 	}
 
-	// Calculate bucket hash
+	// Calculate the actual bucket hash.
 	hash, err := calcBucketHash(srcBkt)
 	if err != nil {
-		return err
+		return fmt.Errorf(err160, fileset, err)
 	}
 
 	// Fetch the signature bucket.
-	signaturesBkt := db.boltTx.Bucket([]byte("_signatures"))
+	// An attacker might have removed the bucket it might indicate tampering.
+	// If the user never created a signature, the bucket does not exist either.
+	signaturesBkt := db.boltTx.Bucket([]byte(sigbucket))
 	if signaturesBkt == nil {
-		return fmt.Errorf("signature verification failure (tampering):no signatures available")
+		return fmt.Errorf(err170)
 	}
 
 	// Fetch the signature.
+	// An attacker might have removed the fileset's signature. It might indicate tampering.
+	// The user might never have created a signature for the fileset.
 	oldSignature := signaturesBkt.Get([]byte(fileset))
 	if oldSignature == nil {
-		return fmt.Errorf("signature verification failure (tampering):no signature found for '%s'", fileset)
+		return fmt.Errorf(err180)
 	}
 
+	// The old hash cannot be reconstructed from the signature.
+	// An attacker might have replaced the signature with another one.
+	// The user might have forgotten the password.
 	plain, err := crypto.Decrypt([]byte(password), oldSignature)
 	if err != nil {
-		return fmt.Errorf("signature verification failure (tampering/wrong password): %v", err)
+		return fmt.Errorf(err190, err)
 	}
 
+	// Compare the old hash from the signature with the newly calculated one.
+	// The fileset might be tampered.
+	// The user might have changed the fileset without creating a new signature.
 	if bytes.Compare(plain, hash) != 0 {
-		return fmt.Errorf("signature verification failure:fileset contents changed (tampering)")
+		return fmt.Errorf(err200)
 	}
 
 	log.Printf("Integrity check of fileset '%s' is ok.", fileset)
 	return nil
 }
 
-// Calculate sha256 of the contents of a bucket.
+// Calculate sha256 of the contents of a bucket. Both keys and values are taken into account.
 func calcBucketHash(srcBkt *bolt.Bucket) ([]byte, error) {
 	h := sha256.New()
 	c := srcBkt.Cursor()
 	for k, v := c.First(); k != nil; k, v = c.Next() {
 		_, err := h.Write(k)
 		if err != nil {
-			return nil, fmt.Errorf("calculate content hash")
+			return nil, err
 		}
 		_, err = h.Write(v)
 		if err != nil {
-			return nil, fmt.Errorf("calculate content hash")
+			return nil, err
 		}
 	}
 	return h.Sum(nil), nil
