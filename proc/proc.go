@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-var fileChecks = map[string]fileChecker {
+var fileChecks = map[string]fileChecker{
 	"nocheck":     noChecker{},
 	"size":        fileSizeChecker{},
 	"ownership":   ownershipChecker{},
@@ -21,7 +21,7 @@ var fileChecks = map[string]fileChecker {
 	"sha256":      sha256Checker{},
 }
 
-var dirChecks = map[string]fileChecker {
+var dirChecks = map[string]fileChecker{
 	"nocheck":     noChecker{},
 	"ownership":   ownershipChecker{},
 	"child":       childChecker{},
@@ -35,6 +35,7 @@ type fileChecker interface {
 }
 
 const (
+	err005 = "(proc/005) fileset '%s' cannot start with underscore _ (reserved name)"
 	err010 = "(proc/010) parse file checks:%v"
 	err020 = "(proc/020) parse dir checks:%v"
 	err030 = "(proc/030) unknown check '%s'"
@@ -64,6 +65,10 @@ const (
 
 // Add the slice of file or directory names to the fileset. The fileset is created if it does not exist.
 func AddFiles(fileNames []string, fileset string, recursive bool, overwrite bool, skip bool, filechecks string, dirchecks string, tripDb *db.TriplineDb) error {
+	if strings.HasPrefix(fileset, "_") {
+		log.Fatalf(err005, fileset)
+	}
+
 	fc, err := parseFileChecks(filechecks)
 	if err != nil {
 		log.Fatalf(err010, err)
@@ -100,7 +105,7 @@ func parseDirChecks(checks string) ([]string, error) {
 
 // Split the string of identifiers "check1,check-2,...,check-n" into a slice and verify that each identifier
 // is a valid one, it is a member of the set of valid identifiers.
-func splitChecks (checks string, validSet map[string]fileChecker) ([]string, error) {
+func splitChecks(checks string, validSet map[string]fileChecker) ([]string, error) {
 	result := strings.Split(checks, ",")
 	for i, c := range result {
 		result[i] = strings.ToLower(strings.TrimSpace(c))
@@ -112,7 +117,7 @@ func splitChecks (checks string, validSet map[string]fileChecker) ([]string, err
 	return result, nil
 }
 
-func addFileOrDir(fn string, fileset string, recursive bool, overwrite bool, skip bool,filechecks []string, dirchecks []string, tripDb *db.TriplineDb) error {
+func addFileOrDir(fn string, fileset string, recursive bool, overwrite bool, skip bool, filechecks []string, dirchecks []string, tripDb *db.TriplineDb) error {
 	fqn, err := filepath.Abs(fn)
 	if err != nil {
 		return fmt.Errorf(err040, fn, err)
@@ -186,13 +191,17 @@ func addFileOrDir(fn string, fileset string, recursive bool, overwrite bool, ski
 }
 
 func ListRecords(fileset string, tripDb *db.TriplineDb) error {
+	if strings.HasPrefix(fileset, "_") {
+		log.Fatalf(err005, fileset)
+	}
+
 	entries, err := tripDb.ListTriplineRecords(fileset)
 	if err != nil {
 		return fmt.Errorf(err080, fileset, err)
 	}
 	for _, rec := range entries {
 		pretty, err := json.Marshal(rec.Record)
-		if err!= nil {
+		if err != nil {
 			// Just print the record without formatting.
 			log.Printf(msg060, rec.Path, rec.Record)
 		} else {
@@ -204,6 +213,10 @@ func ListRecords(fileset string, tripDb *db.TriplineDb) error {
 }
 
 func DeleteSet(fileset string, tripDb *db.TriplineDb) error {
+	if strings.HasPrefix(fileset, "_") {
+		log.Fatalf(err005, fileset)
+	}
+
 	err := tripDb.DeleteFileset(fileset)
 	if err != nil {
 		return fmt.Errorf(err090, fileset, err)
@@ -212,8 +225,11 @@ func DeleteSet(fileset string, tripDb *db.TriplineDb) error {
 }
 
 func VerifyFiles(fileNames []string, fileset string, tripDb *db.TriplineDb) (int, error) {
-	totalFails := 0
+	if strings.HasPrefix(fileset, "_") {
+		log.Fatalf(err005, fileset)
+	}
 
+	totalFails := 0
 	if len(fileNames) == 0 {
 		fails, err := verifyFile("", fileset, tripDb)
 		if err != nil {
@@ -277,7 +293,7 @@ func verifyFile(fqn string, fileset string, tripDb *db.TriplineDb) (int, error) 
 			var checker fileChecker
 			if entry.Record.IsDir {
 				checker = dirChecks[checkName]
-			 } else {
+			} else {
 				checker = fileChecks[checkName]
 			}
 			if checker == nil {
@@ -302,12 +318,22 @@ func Listsets(tripDb *db.TriplineDb) error {
 		return fmt.Errorf(err100, err)
 	}
 	for _, set := range sets {
-		log.Printf(msg090, set)
+		if !strings.HasPrefix(set, "_") {
+			log.Printf(msg090, set)
+		}
 	}
 	return nil
 }
 
 func CopySet(from, to string, tripDb *db.TriplineDb) error {
+	if strings.HasPrefix(from, "_") {
+		log.Fatalf(err005, from)
+	}
+
+	if strings.HasPrefix(to, "_") {
+		log.Fatalf(err005, to)
+	}
+
 	err := tripDb.CopyFileset(from, to)
 	if err != nil {
 		return fmt.Errorf(err110, err)
@@ -316,6 +342,10 @@ func CopySet(from, to string, tripDb *db.TriplineDb) error {
 }
 
 func DeleteFiles(fileNames []string, fileset string, tripDb *db.TriplineDb) error {
+	if strings.HasPrefix(fileset, "_") {
+		log.Fatalf(err005, fileset)
+	}
+
 	for _, fn := range fileNames {
 		fqn, err := filepath.Abs(fn)
 		if err != nil {
@@ -333,6 +363,29 @@ func DeleteFiles(fileNames []string, fileset string, tripDb *db.TriplineDb) erro
 				return fmt.Errorf(err130, entry.Path)
 			}
 		}
+	}
+	return nil
+}
+
+func SignSet(fileset string, password string, update bool, tripDb *db.TriplineDb) error {
+	if strings.HasPrefix(fileset, "_") {
+		log.Fatalf(err005, fileset)
+	}
+	err := tripDb.SignFileset(fileset, password, update)
+	if err != nil {
+		return fmt.Errorf("sign fileset:%v", err)
+	}
+	return nil
+}
+
+func VerifySetSignature(fileset string, password string, tripDb *db.TriplineDb) error {
+	if strings.HasPrefix(fileset, "_") {
+		log.Fatalf(err005, fileset)
+	}
+
+	err := tripDb.VerifyFilesetSignature(fileset, password)
+	if err != nil {
+		return fmt.Errorf("verify fileset signature:%v", err)
 	}
 	return nil
 }

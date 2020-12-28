@@ -53,6 +53,10 @@ func main() {
 	copySetFlags := flag.NewFlagSet("copyset", flag.ExitOnError)
 	copyFileset := copySetFlags.String("fileset", "default", "Fileset to copy.")
 
+	signFlags := flag.NewFlagSet("sign/verisign", flag.ExitOnError)
+	signFileset := signFlags.String("fileset", "default", "Fileset to copy.")
+	signOverwrite := signFlags.Bool("overwrite", false, "Overwrite existing signature.")
+
 	flagSets := []*flag.FlagSet{addFlags, deleteFlags, verifyFlags, listFlags, deleteSetFlags, copySetFlags}
 	// 0 = executable name
 	// 1 = command
@@ -104,7 +108,7 @@ func main() {
 		}
 		// Start read transaction
 		must(tripDb.Begin(false))
-		defer func() {must(tripDb.Rollback()) }()
+		defer func() { must(tripDb.Rollback()) }()
 		fails, err := proc.VerifyFiles(verifyFlags.Args(), *verifyFileset, tripDb)
 		must(err)
 		if fails > 0 {
@@ -150,7 +154,7 @@ func main() {
 		}
 		// Start readable transaction
 		must(tripDb.Begin(false))
-		defer func() { must(tripDb.Rollback())}()
+		defer func() { must(tripDb.Rollback()) }()
 		must(proc.Listsets(tripDb))
 	case "copyset":
 		// Parse args
@@ -159,13 +163,39 @@ func main() {
 			copySetFlags.Usage()
 		}
 		// Arity check
-		if copySetFlags.NArg() != 1  {
+		if copySetFlags.NArg() != 1 {
 			log.Fatalf(err070)
 		}
 		// Start writable transaction
 		must(tripDb.Begin(true))
-		defer func() {must(tripDb.Rollback())}()
-		mustCommitOrRollback(proc.CopySet(*copyFileset, copySetFlags.Arg(0), tripDb), tripDb)
+		mustCommitOrRollback(
+			proc.CopySet(*copyFileset, copySetFlags.Arg(0), tripDb), tripDb)
+	case "sign":
+		// Parse the arguments
+		err := signFlags.Parse(os.Args[2:])
+		if err == flag.ErrHelp {
+			signFlags.Usage()
+		}
+		// Arity check
+		if signFlags.NArg() != 1 {
+			log.Fatal("password must be provided")
+		}
+		// Start writable transaction
+		must(tripDb.Begin(true))
+		mustCommitOrRollback(proc.SignSet(*signFileset, signFlags.Arg(0), *signOverwrite, tripDb), tripDb)
+	case "verisign":
+		// Parse the arguments
+		err := signFlags.Parse(os.Args[2:])
+		if err == flag.ErrHelp {
+			signFlags.Usage()
+		}
+		// Arity check
+		if signFlags.NArg() != 1 {
+			log.Fatal("password must be provided")
+		}
+		must(tripDb.Begin(false))
+		defer func() { must(tripDb.Rollback()) }()
+		must(proc.VerifySetSignature(*signFileset, signFlags.Arg(0), tripDb))
 	default:
 		log.Printf(err080, cmd)
 		printManualAndExit(flagSets)
@@ -201,5 +231,3 @@ func printManualAndExit(sets []*flag.FlagSet) {
 	}
 	os.Exit(1)
 }
-
-

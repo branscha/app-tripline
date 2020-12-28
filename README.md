@@ -29,7 +29,8 @@ Add options
 
 
     tripline delete (FILE|DIR)+
-    
+
+
 Delete options
 * **--fileset NAME**. 
    * The fileset from which to delete the files and directories.
@@ -41,6 +42,7 @@ Delete options
     
     Example
     $ tripline verify
+
     
 Verify options
 * **--fileset NAME**. 
@@ -56,15 +58,15 @@ List the contents of a fileset
     
 
     tripline list
-    
-    
+
+  
 Delete a fileset
 * Delete options
     * **--fileset NAME**.
 
 
     tripline deleteset
-    
+
 
 Copy a fileset. Can be handy before making modifications.
 * Copyset options
@@ -72,18 +74,31 @@ Copy a fileset. Can be handy before making modifications.
 
 
     tripline copyset TO
-    
-    
+
+
 List the available datasets
 * Listsets options
     * **--fileset NAME**.
 
 
     tripline listsets
-    
-    
+
+## Signatures
+
+Protect against database tampering with signatures. It is a manual process, the signatures are not automatically 
+verified by the other operations. 
+
+    tripline sign
+    tripline verisign
+
+Options
+* --fileset NAME
+* --overwrite BOOL
+
+
 ## Improvements
 
 * Add multithreading to parallelize the testing.
-* Add a bucket _signatures containing signed hashes of the file sets to verify database tampering.
 * Add options to configure the processing of symbolic links. Sometimes you might want to handle the symlinks as files.
+* Port to other platforms mswin, osx, ...
+* Add unit tests
