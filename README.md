@@ -28,8 +28,8 @@ Add options
    * Dir default: child,modtime,ownership,permissions
 
 
-    tripline delete (FILE|DIR)+
 
+    tripline delete (FILE|DIR)+
 
 Delete options
 * **--fileset NAME**. 
