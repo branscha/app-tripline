@@ -6,11 +6,12 @@ A tool to verify file integrity. Verify if some aspect of a file or directory ha
 ## Usage
 ### Add file/directory information
 
-
-    tripline add (FILE|DIR)+
+```
+tripline add (FILE|DIR)+
     
-    Example
-    $ tripline add ~/.ssh
+Example
+$ tripline add ~/.ssh
+```
     
 Add options
 * **--fileset NAME**. 
@@ -28,8 +29,12 @@ Add options
    * Dir default: child,modtime,ownership,permissions
 
 
+```bash
+tripline delete (FILE|DIR)+
 
-    tripline delete (FILE|DIR)+
+Example
+tripline delete ~/./ssh/id.pub
+```
 
 Delete options
 * **--fileset NAME**. 
