@@ -2,10 +2,14 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/branscha/tripline/db"
 	"github.com/branscha/tripline/proc"
+	"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"
+	"strings"
+	"syscall"
 )
 
 const (
@@ -14,12 +18,13 @@ const (
 	err030 = "(tripl/030) command 'add' expects one or more filenames"
 	err035 = "(tripl/035) command 'delete' expects one or more filenames"
 	err040 = "(tripl/040) command 'list' does not handle arguments"
-	err050 = "(tripl/050) command 'deleteset' does not handle arguments"
+	err050 = "(tripl/050) command 'deleteset' does not parameters"
 	err060 = "(tripl/060) command 'listsets' does not handle arguments"
 	err070 = "(tripl/070) command 'copyset' expects a single argument, the target fileset name"
 	err080 = "(tripl/080) unknown command '%s'"
-	err090 = "(tripl/090) command 'sign' expects a password argument"
-	err095 = "(tripl/095) command 'verifysig' expects a password argument"
+	err090 = "(tripl/090) command 'sign' does not have parameters"
+	err095 = "(tripl/095) command 'verifysig' does not have parameters"
+	err100 = "(tripl/100) command read password: %v"
 )
 
 const (
@@ -179,12 +184,16 @@ func main() {
 			signFlags.Usage()
 		}
 		// Arity check
-		if signFlags.NArg() != 1 {
+		if signFlags.NArg() != 0 {
 			log.Fatal(err090)
+		}
+		pwd, err := readSecret()
+		if err != nil {
+			log.Fatalf(err100, err)
 		}
 		// Start writable transaction
 		must(tripDb.Begin(true))
-		mustCommitOrRollback(proc.SignSet(*signFileset, signFlags.Arg(0), *signOverwrite, tripDb), tripDb)
+		mustCommitOrRollback(proc.SignSet(*signFileset, pwd, *signOverwrite, tripDb), tripDb)
 	case "verifysig":
 		// Parse the arguments
 		err := signFlags.Parse(os.Args[2:])
@@ -192,12 +201,16 @@ func main() {
 			signFlags.Usage()
 		}
 		// Arity check
-		if signFlags.NArg() != 1 {
+		if signFlags.NArg() != 0 {
 			log.Fatal(err095)
+		}
+		pwd, err := readSecret()
+		if err != nil {
+			log.Fatalf(err100, err)
 		}
 		must(tripDb.Begin(false))
 		defer func() { must(tripDb.Rollback()) }()
-		must(proc.VerifySetSignature(*signFileset, signFlags.Arg(0), tripDb))
+		must(proc.VerifySetSignature(*signFileset, pwd, tripDb))
 	default:
 		log.Printf(err080, cmd)
 		printManualAndExit(flagSets)
@@ -233,4 +246,16 @@ func printManualAndExit(sets []*flag.FlagSet) {
 		set.Usage()
 	}
 	os.Exit(1)
+}
+
+func readSecret() (string, error) {
+	fmt.Print("Enter Password: ")
+	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	fmt.Println()
+	if err != nil {
+		return "", err
+	}
+
+	password := string(bytePassword)
+	return strings.TrimSpace(password), nil
 }
