@@ -21,10 +21,10 @@ const (
 	err050 = "(tripl/050) command 'deleteset' does not parameters"
 	err060 = "(tripl/060) command 'listsets' does not handle arguments"
 	err070 = "(tripl/070) command 'copyset' expects a single argument, the target fileset name"
-	err080 = "(tripl/080) unknown command '%s'"
+	err080 = "(tripl/080) unknown command %q"
 	err090 = "(tripl/090) command 'sign' does not have parameters"
 	err095 = "(tripl/095) command 'verifysig' does not have parameters"
-	err100 = "(tripl/100) command read password: %v"
+	err100 = "(tripl/100) command read password:%v"
 )
 
 const (

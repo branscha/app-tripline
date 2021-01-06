@@ -20,23 +20,23 @@ const (
 )
 
 const (
-	err010 = "(db/010) create/open fileset '%s':%v"
-	err020 = "(db/020) unknown fileset '%s'"
+	err010 = "(db/010) create/open fileset %q:%v"
+	err020 = "(db/020) unknown fileset %q"
 	err030 = "(db/030) marshal tripline record:%v"
 	err040 = "(db/040) add tripline record to database:%v"
-	err050 = "(db/050) path '%s' does not exist in fileset '%s'"
+	err050 = "(db/050) path %q does not exist in fileset %q"
 	err060 = "(db/060) delete tripline record:%v"
 	err070 = "(db/070) unmarshal tripline record:%v"
 	err080 = "(db/080) transaction required"
 	err085 = "(db/085) write transaction required"
 	err090 = "(db/090) nested transaction"
 	err100 = "(db/100) transaction forbidden"
-	err110 = "(db/110) create fileset '%s':%v"
-	err120 = "(db/120) copy fileset '%s':%v"
+	err110 = "(db/110) create fileset %q:%v"
+	err120 = "(db/120) copy fileset %q:%v"
 	err130 = "(db/130) open/create signatures:%v"
-	err140 = "(db/140) fileset signature '%s' exists"
-	err150 = "(db/150) sign fileset '%s':%v"
-	err160 = "(db/160) fileset hash '%s':%v"
+	err140 = "(db/140) fileset signature %q exists"
+	err150 = "(db/150) sign fileset %q:%v"
+	err160 = "(db/160) fileset hash %q:%v"
 	err170 = "(db/170) no signatures, none added or tampered"
 	err180 = "(db/180) no signature, not added or tampered"
 	err190 = "(db/190) wrong password or tampered: %v"
@@ -419,7 +419,7 @@ func (db *TriplineDb) VerifyFilesetSignature(fileset string, password string) er
 		return fmt.Errorf(err200)
 	}
 
-	log.Printf("Integrity check of fileset '%s' is ok.", fileset)
+	log.Printf("Integrity fileset %q is ok.", fileset)
 	return nil
 }
 

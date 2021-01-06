@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type childChecker struct {}
+type childChecker struct{}
 
 func (d childChecker) prepareCheck(fqn string, _ os.FileInfo) (interface{}, error) {
 	childList, err := childList(fqn)
@@ -40,11 +40,11 @@ func (d childChecker) executeCheck(fqn string, data interface{}, _ os.FileInfo) 
 			// We found it, just remove from the map.
 			delete(diff, actualChild)
 		} else {
-			diffResult = append(diffResult, fmt.Sprintf("new child '%s'", actualChild))
+			diffResult = append(diffResult, fmt.Sprintf("new child %q", actualChild))
 		}
 	}
 	for remChild := range diff {
-		diffResult = append(diffResult, fmt.Sprintf("removed child '%s'", remChild))
+		diffResult = append(diffResult, fmt.Sprintf("removed child %q", remChild))
 	}
 
 	if len(diffResult) > 0 {
@@ -54,7 +54,7 @@ func (d childChecker) executeCheck(fqn string, data interface{}, _ os.FileInfo) 
 	}
 }
 
-func childList(fqn string) ([]string, error){
+func childList(fqn string) ([]string, error) {
 	children, err := ioutil.ReadDir(fqn)
 	if err != nil {
 		return nil, err

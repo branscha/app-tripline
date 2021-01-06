@@ -35,22 +35,22 @@ type fileChecker interface {
 }
 
 const (
-	err005 = "(proc/005) fileset '%s' underscore prefix reserved for internal use"
+	err005 = "(proc/005) fileset %q underscore prefix reserved for internal use"
 	err010 = "(proc/010) parse file checks:%v"
 	err020 = "(proc/020) parse dir checks:%v"
-	err030 = "(proc/030) unknown check '%s'"
-	err040 = "(proc/040) file '%s':%v"
-	err050 = "(proc/050) file '%s' check '%s':%v"
-	err060 = "(proc/060) dir '%s' check '%s':%v"
-	err070 = "(proc/070) add file '%s':%v"
-	err080 = "(proc/080) list fileset '%s':%v"
-	err090 = "(proc/090) delete fileset '%s':%v"
+	err030 = "(proc/030) unknown check %q"
+	err040 = "(proc/040) file %q:%v"
+	err050 = "(proc/050) file %q check %q:%v"
+	err060 = "(proc/060) dir %q check %q:%v"
+	err070 = "(proc/070) add file %q:%v"
+	err080 = "(proc/080) list fileset %q:%v"
+	err090 = "(proc/090) delete fileset %q:%v"
 	err100 = "(proc/100) list filesets:%v"
 	err110 = "(proc/110) copy fileset:%v"
-	err120 = "(proc/120) query files '%s':%v"
+	err120 = "(proc/120) query files %q:%v"
 	err130 = "(proc/130) delete file:%v"
-	err140 = "(proc/140) verify fileset '%s' signature:%v"
-	err150 = "(proc/150) sign fileset '%s':%v"
+	err140 = "(proc/140) verify fileset %q signature:%v"
+	err150 = "(proc/150) sign fileset %q:%v"
 )
 
 const (
@@ -60,7 +60,7 @@ const (
 	msg040 = "%s:%s:%v"
 	msg060 = "%v:%v"
 	msg070 = "skip %s"
-	msg080 = "%d entries with prefix '%s'"
+	msg080 = "%d entries with prefix %q"
 	msg085 = "%d entries"
 	msg090 = "%s"
 )
@@ -242,7 +242,7 @@ func VerifyFiles(fileNames []string, fileset string, tripDb *db.TriplineDb) (int
 		for _, fn := range fileNames {
 			fqn, err := filepath.Abs(fn)
 			if err != nil {
-				return 0, fmt.Errorf("file '%s':%v", fn, err)
+				return 0, fmt.Errorf("file %q:%v", fn, err)
 			}
 
 			fails, err := verifyFile(fqn, fileset, tripDb)
