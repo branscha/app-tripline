@@ -15,16 +15,11 @@ import (
 const (
 	err010 = "(tripl/010) error:%v"
 	err020 = "(tripl/020) expected command: add, delete, verify, list, deleteset, copyset, listsets, sign or verifysig"
-	err030 = "(tripl/030) command 'add' expects one or more filenames"
-	err035 = "(tripl/035) command 'delete' expects one or more filenames"
-	err040 = "(tripl/040) command 'list' does not handle arguments"
-	err050 = "(tripl/050) command 'deleteset' does not parameters"
-	err060 = "(tripl/060) command 'listsets' does not handle arguments"
-	err070 = "(tripl/070) command 'copyset' expects a single argument, the target fileset name"
-	err080 = "(tripl/080) unknown command %q"
-	err090 = "(tripl/090) command 'sign' does not have parameters"
-	err095 = "(tripl/095) command 'verifysig' does not have parameters"
-	err100 = "(tripl/100) command read password:%v"
+	err030 = "(tripl/030) command %q expects one or more filenames"
+	err040 = "(tripl/040) command %q does not accept arguments"
+	err050 = "(tripl/050) command \"copyset\" expects a single argument, the target fileset name"
+	err060 = "(tripl/060) unknown command %q"
+	err070 = "(tripl/070) command read password:%v"
 )
 
 const (
@@ -35,6 +30,7 @@ const (
 func main() {
 	// Remove timestamps from the default logger.
 	log.SetFlags(0)
+	log.SetOutput(os.Stdout)
 
 	// Define command line args
 	addFlags := flag.NewFlagSet("add", flag.ExitOnError)
@@ -87,7 +83,7 @@ func main() {
 		}
 		// Arity check
 		if addFlags.NArg() <= 0 {
-			log.Fatal(err030)
+			log.Fatalf(err030, cmd)
 		}
 		// Start writable transaction
 		must(tripDb.Begin(true))
@@ -101,7 +97,7 @@ func main() {
 		}
 		// Arity check
 		if deleteFlags.NArg() <= 0 {
-			log.Fatal(err035)
+			log.Fatalf(err030, cmd)
 		}
 		// Start writable transaction
 		must(tripDb.Begin(true))
@@ -134,7 +130,7 @@ func main() {
 		}
 		// Arity check
 		if flag.NArg() > 1 {
-			log.Fatalf(err040)
+			log.Fatalf(err040, cmd)
 		}
 		// Start readable transaction
 		must(tripDb.Begin(false))
@@ -148,7 +144,7 @@ func main() {
 		}
 		// Arity check
 		if deleteSetFlags.NArg() > 0 {
-			log.Fatal(err050)
+			log.Fatalf(err040, cmd)
 		}
 		// Start writable transaction
 		must(tripDb.Begin(true))
@@ -157,7 +153,7 @@ func main() {
 	case "listsets":
 		// Arity check
 		if len(os.Args) > 2 {
-			log.Fatalf(err060)
+			log.Fatalf(err040, cmd)
 		}
 		// Start readable transaction
 		must(tripDb.Begin(false))
@@ -171,7 +167,7 @@ func main() {
 		}
 		// Arity check
 		if copySetFlags.NArg() != 1 {
-			log.Fatalf(err070)
+			log.Fatalf(err050)
 		}
 		// Start writable transaction
 		must(tripDb.Begin(true))
@@ -185,11 +181,11 @@ func main() {
 		}
 		// Arity check
 		if signFlags.NArg() != 0 {
-			log.Fatal(err090)
+			log.Fatalf(err040, cmd)
 		}
 		pwd, err := readSecret()
 		if err != nil {
-			log.Fatalf(err100, err)
+			log.Fatalf(err070, err)
 		}
 		// Start writable transaction
 		must(tripDb.Begin(true))
@@ -202,17 +198,17 @@ func main() {
 		}
 		// Arity check
 		if signFlags.NArg() != 0 {
-			log.Fatal(err095)
+			log.Fatalf(err040, cmd)
 		}
 		pwd, err := readSecret()
 		if err != nil {
-			log.Fatalf(err100, err)
+			log.Fatalf(err070, err)
 		}
 		must(tripDb.Begin(false))
 		defer func() { must(tripDb.Rollback()) }()
 		must(proc.VerifySetSignature(*signFileset, pwd, tripDb))
 	default:
-		log.Printf(err080, cmd)
+		log.Printf(err060, cmd)
 		printManualAndExit(flagSets)
 	}
 }
