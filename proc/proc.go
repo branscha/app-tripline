@@ -2,6 +2,7 @@ package proc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/branscha/tripline/db"
 	"io/ioutil"
@@ -36,21 +37,21 @@ type fileChecker interface {
 
 const (
 	err005 = "(proc/005) fileset %q underscore prefix reserved for internal use"
-	err010 = "(proc/010) parse file checks:%v"
-	err020 = "(proc/020) parse dir checks:%v"
+	err010 = "(proc/010) parse file checks:%w"
+	err020 = "(proc/020) parse dir checks:%w"
 	err030 = "(proc/030) unknown check %q"
-	err040 = "(proc/040) file %q:%v"
-	err050 = "(proc/050) file %q check %q:%v"
-	err060 = "(proc/060) dir %q check %q:%v"
-	err070 = "(proc/070) add file %q:%v"
-	err080 = "(proc/080) list fileset %q:%v"
-	err090 = "(proc/090) delete fileset %q:%v"
-	err100 = "(proc/100) list filesets:%v"
-	err110 = "(proc/110) copy fileset:%v"
-	err120 = "(proc/120) query files %q:%v"
-	err130 = "(proc/130) delete file:%v"
-	err140 = "(proc/140) verify fileset %q signature:%v"
-	err150 = "(proc/150) sign fileset %q:%v"
+	err040 = "(proc/040) file %q:%w"
+	err050 = "(proc/050) file %q check %q:%w"
+	err060 = "(proc/060) dir %q check %q:%w"
+	err070 = "(proc/070) add file %q:%w"
+	err080 = "(proc/080) list fileset %q:%w"
+	err090 = "(proc/090) delete fileset %q:%w"
+	err100 = "(proc/100) list filesets:%w"
+	err110 = "(proc/110) copy fileset:%w"
+	err120 = "(proc/120) query files %q:%w"
+	err130 = "(proc/130) delete file:%w"
+	err140 = "(proc/140) verify fileset %q signature:%w"
+	err150 = "(proc/150) sign fileset %q:%w"
 )
 
 const (
@@ -161,7 +162,7 @@ func addFileOrDir(fn string, fileset string, recursive bool, overwrite bool, ski
 
 	err = tripDb.AddTriplineRecord(fqn, rec, fileset, overwrite)
 	if err != nil {
-		if err == db.RecordExists {
+		if errors.Is(err, db.RecordExists) {
 			if skip {
 				// Ignore the error, we are skipping the files when the
 				// skip flag is set.

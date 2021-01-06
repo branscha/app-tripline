@@ -13,13 +13,13 @@ import (
 )
 
 const (
-	err010 = "(tripl/010) error:%v"
+	err010 = "(tripl/010) error:%w"
 	err020 = "(tripl/020) expected command: add, delete, verify, list, deleteset, copyset, listsets, sign or verifysig"
 	err030 = "(tripl/030) command %q expects one or more filenames"
 	err040 = "(tripl/040) command %q does not accept arguments"
 	err050 = "(tripl/050) command \"copyset\" expects a single argument, the target fileset name"
 	err060 = "(tripl/060) unknown command %q"
-	err070 = "(tripl/070) command read password:%v"
+	err070 = "(tripl/070) command read password:%w"
 )
 
 const (
